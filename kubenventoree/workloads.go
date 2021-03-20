@@ -103,6 +103,18 @@ func (k *Kubenventoree) ReadClusterInfo() (*ClusterInfo, error) {
 		}
 	}
 
+	secrets, err := k.ClientSet.CoreV1().Secrets("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Printf("Cannot read secrets\n")
+		return nil, err
+	}
+	for _, secret := range secrets.Items {
+		if strings.Contains(secret.Name, ".helm.") {
+			clusterInfo.HasHelm = true
+			break
+		}
+	}
+
 	// service account imagepull /  helm
 	sas, err := k.ClientSet.CoreV1().ServiceAccounts("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
