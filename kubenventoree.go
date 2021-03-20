@@ -1,36 +1,24 @@
-package kubenventoree
+package main
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"kubenventoree/kubenventoree"
 	"log"
 	"os"
 
 	"github.com/alecthomas/kong"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
-type cmdoptions struct {
-	AllTests       bool   `help:"Run all queries"`
-	KubeConfigPath string `short:"k" default:"" help:"path to the kubeconfig file" type:"path"`
-	Output         string `short:"o" required help:"output file name" type:"path"`
-	OutputFormat   string `short:"f" default:text help:"format of the output (json, yaml, text)"`
-}
-
-var cliOptions cmdoptions
-
-type Kubenventoree struct {
-	Options   *cmdoptions
-	ClientSet *kubernetes.Clientset
-}
+var cliOptions kubenventoree.Cmdoptions
 
 type DiscoveryResult struct {
-	ImageInventory   *ClusterImageInventory `json:"image_inventory"`
-	WokloadInventory *WorkloadInventory     `json:"workload_inventory"`
-	ClusterInfo      *ClusterInfo           `json:"cluster_info"`
+	ImageInventory   *kubenventoree.ClusterImageInventory `json:"image_inventory"`
+	WokloadInventory *kubenventoree.WorkloadInventory     `json:"workload_inventory"`
+	ClusterInfo      *kubenventoree.ClusterInfo           `json:"cluster_info"`
 }
 
 func main() {
@@ -38,7 +26,7 @@ func main() {
 
 	//fmt.Printf("Command: %s\n", ctx.Command())
 	//fmt.Printf("Struct: %s %s", cliOptions.Output, cliOptions.OutputFormat)
-	cs, err := GetK8sClientset(cliOptions.KubeConfigPath)
+	cs, err := kubenventoree.GetK8sClientset(cliOptions.KubeConfigPath)
 	if err != nil {
 		log.Fatalf("Cannot access kubernetes config file (%s)", err)
 		ctx.Exit(1)
@@ -51,7 +39,7 @@ func main() {
 	}
 
 	result := DiscoveryResult{}
-	k := Kubenventoree{Options: &cliOptions, ClientSet: cs}
+	k := kubenventoree.Kubenventoree{Options: &cliOptions, ClientSet: cs}
 
 	result.ImageInventory, err = k.ReadImageInventory()
 	if err != nil {
@@ -88,6 +76,10 @@ func main() {
 				log.Fatalf("yaml conversion failed %s", err)
 			}
 			result_text = string(result_bytes)
+		}
+	default:
+		{
+			log.Fatalf("Unsupported output format %s", cliOptions.OutputFormat)
 		}
 	}
 
